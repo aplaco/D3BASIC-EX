@@ -1,4 +1,4 @@
-const dataset = [600, 150, 80, 180, 120];
+const dataset = [600, 150, 80, 180, 120, 400, 280];
 
 // 이벤트 바인딩
 render();
@@ -8,12 +8,16 @@ window.addEventListener("resize", render);
 function render() {
   const svg = d3.select("svg");
   const svgWid = svg.node().getBoundingClientRect().width;
-
   const svgHt = svg.node().getBoundingClientRect().height;
-  const initPos = 100;
-  const barWid = (svgWid - initPos * 2) / dataset.length;
-  const barPadding = barWid;
-  //const barWid = 50;
+
+  const initPos = 200; //svg 양 옆 여백
+  const gap = 50; //바 사이 간격
+
+  // 전체 바 너비 = 전체 SVG폭 - (좌우 여백+사이간격)
+  // 개별 바 너비 = 전체 바 너비 / 데이터 갯수
+  // svg너비 - (양옆 간격 + 사이간격)
+  const barWid =
+    (svgWid - (initPos * 2 + gap * (dataset.length - 1))) / dataset.length;
 
   //높이값 퍼센트 변환 함수
   const yPercent = d3
@@ -32,20 +36,21 @@ function render() {
     .enter()
     .append("rect")
     .attr("y", (d, i) => svgHt - yPercent(d))
-    .attr("x", (d, i) => i * barPadding + initPos)
+    .attr("x", (d, i) => i * (barWid + gap) + initPos)
     .attr("height", (d) => yPercent(d))
     .attr("width", barWid)
     .attr("fill", "pink");
 
   //텍스트 출력
-  // svg
-  //   .selectAll("text")
-  //   .data(dataset)
-  //   .enter()
-  //   .append("text")
-  //   .text((d) => d)
-  //   .attr("y", (d) => svgHt - yPercent(d) + 20)
-  //   .attr("x", (d, i) => i * barPadding + 10 + 10)
-  //   .attr("font-size", "16px")
-  //   .attr("fill", "black");
+  svg
+    .selectAll("text")
+    .data(dataset)
+    .enter()
+    .append("text")
+    .text((d) => d)
+    .attr("y", (d) => svgHt - yPercent(d) + 30)
+    .attr("x", (d, i) => i * (barWid + gap) + initPos + barWid / 2) //기존 가로 위치에서 바의 너비 절반만큼 더 오른쪽으로 이동시킴
+    .attr("font-size", "16px")
+    .attr("fill", "black")
+    .attr("text-anchor", "middle"); //x축 기준점을 기준으로 중앙 배치
 }
