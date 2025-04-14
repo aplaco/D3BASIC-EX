@@ -1,30 +1,47 @@
-const dataset = [100, 200, 300, 400, 500];
-const bgColors = ["red", "green", "blue", "pink", "aqua"];
-const svg = document.querySelector("svg");
-//dataset 자료를 기반으로 js에서 svg프레임의 너비, 높이를 동적으로 설정
-svg.style.width = 550 + "px";
-svg.style.height = 30 * dataset.length + 10 + "px";
+const dataset = [600, 150, 80, 180, 120];
 
-//데이터 입력시 text요소는 y축을 기준으로 위쪽에 글이 배치됨
-//반면 rect같은 box요소는 y축을 기준으로 아래쪽에 배치됨
-d3.select("svg")
-  .selectAll("rect")
-  .data(dataset)
-  .enter()
-  .append("rect")
-  .attr("x", 0)
-  .attr("y", (d, i) => i * 30 + 10)
-  .attr("height", 25)
-  .attr("width", (d) => d)
-  .attr("fill", (d, i) => bgColors[i]); //dataset기준으로 반복도는 순번값 i를 가져와서 bgColors배열의 순번과 연결
+//문서 로딩시 svg를 그려주는 함수 호출
+render();
+//브라우저 리사이즈시 svg 렌더링하는 함수 재호출 (화면 갱신)
+window.addEventListener("resize", render);
 
-//svg 안쪽에 text요소 추가 출력
-d3.select("svg")
-  .selectAll("text")
-  .data(dataset)
-  .enter()
-  .append("text")
-  .text((d) => d)
-  .attr("x", (d) => d + 10)
-  .attr("y", (d, i) => i * 30 + 10 + 20)
-  .attr("font-size", "20px");
+function render() {
+  //svs요소를 찾은뒤, 해당 svg프레임 너비를 구함
+  const svg = d3.select("svg");
+  const svgWid = svg.node().getBoundingClientRect().width;
+
+  //갱신된 svg너비를 활용한 퍼센트 변환함수를 생성
+  const xPercent = d3
+    .scaleLinear()
+    .domain([0, d3.max(dataset)])
+    .range([0, svgWid]);
+
+  //리사이즈 될때마다 기존 text, react요소를 svg안쪽에 제거해서 초기화
+  svg.selectAll("text").remove();
+  svg.selectAll("rect").remove();
+
+  //새로 갱신된 svgWid값으로 text, rect다시 그리기
+  svg
+    .selectAll("rect")
+    .data(dataset)
+    .enter()
+    .append("rect")
+    .attr("x", (d, i) => svgWid - xPercent(d))
+    .attr("y", (d, i) => i * 25 + 10)
+    .attr("width", (d) => xPercent(d))
+    .attr("height", 20)
+    .attr("fill", "pink");
+
+  //텍스트 출력
+  svg
+    .selectAll("text")
+    .data(dataset)
+    .enter()
+    .append("text")
+    .text((d) => d)
+    .attr("x", (d) => svgWid - xPercent(d) + 40)
+    .attr("y", (d, i) => i * 25 + 10 + 16)
+    .attr("font-size", "16px")
+    .attr("fill", "black")
+    .attr("text-anchor", "end");
+}
