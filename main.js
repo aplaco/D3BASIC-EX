@@ -1,63 +1,64 @@
-const dataset = [600, 150, 80, 180, 120, 400, 280];
+const dataset = [600, 150, 80, 180, 280];
 
 // 이벤트 바인딩
-// 함수 호출시 원하는 프로퍼티 정보만 담아서 객체 형태로 인자 전달
-// 아래는 {interval:200} 객체만 함수의 인자로 전달 가능
-render({ interval: 200 });
+renderPie();
+//아래와 같이 이벤트 핸들러를 연결시 renderPie함수에는 첫번째 인수로 event객체 전달됨
+window.addEventListener("resize", renderPie);
 
-//아래 이벤트 바인딩 문에는 인자를 하나도 전달하지 않았기 때문에 함수에 미리 설정한 디폴트 파라미터 값이 적용됨
-window.addEventListener("resize", render);
+function renderPie(opt) {
+  let defaultOpt = { innerRadius: 0, interval: 0, speed: 1000 };
+  //만약 내부적으로 이벤트 객체가 전달될때 일반 객체로 강제 변경처리
+  if (opt instanceof Event) opt = {};
+  //이후 전개 연산자로 기본 객체 정보와 인수로 전달된 객체를 합쳐서 비구조화할당
+  const { innerRadius, interval, speed } = { ...defaultOpt, ...opt };
 
-// 기존 파라미터 값들을 {}로 감싸서 설정하면 함수 호출시 객체 형태로 전달 가능
-function render({ initPos = 100, gap = 50, interval = 0, speed = 1000 }) {
   const svg = d3.select("svg");
-  const svgWid = svg.node().getBoundingClientRect().width;
-  const svgHt = svg.node().getBoundingClientRect().height;
+  const width = svg.node().getBoundingClientRect().width;
+  const outerRadius = (width * 0.7) / 2; // SVG 폭의 70% 크기로 outerRadius 설정
+  const height = outerRadius * 2 + 50; // outerRadius 기반으로 높이값 재설정, 50은 약간의 여유 여백
+  const centerX = width / 2;
+  const centerY = height / 2;
 
-  const barWid =
-    (svgWid - (initPos * 2 + gap * (dataset.length - 1))) / dataset.length;
+  // svg 프레임의 높이를 다시 설정
+  svg.attr("height", height);
 
-  //높이값 퍼센트 변환 함수
-  const yPercent = d3
-    .scaleLinear()
-    .domain([0, d3.max(dataset)])
-    .range([0, svgHt - 30]);
+  svg.selectAll("*").remove();
+  const pie = d3.pie();
+  const pieData = pie(dataset);
+  const arc = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
+  const color = d3.scaleOrdinal(d3.schemeSet3);
 
-  //리사이즈 될때마다 기존 text, react요소를 svg안쪽에 제거해서 초기화
-  svg.selectAll("text").remove();
-  svg.selectAll("rect").remove();
-
-  //새로 갱신된 svgHt값으로 text, rect다시 그리기
   svg
-    .selectAll("rect")
-    .data(dataset)
+    .selectAll("path")
+    .data(pieData)
     .enter()
-    .append("rect")
-    .attr("y", svgHt)
-    .attr("x", (d, i) => i * (barWid + gap) + initPos)
-    .attr("height", 0)
-    .attr("width", barWid)
-    .attr("fill", "pink")
+    .append("path")
+    .attr("d", arc)
+    .attr("fill", (d, i) => color(i))
+    .attr("transform", `translate(${centerX}, ${centerY})`)
+    .attr("opacity", 0)
     .transition()
-    .delay((d, i) => interval * i) //첫번째바는 바로모션시작, 2번째 바는 0.2초이따 모션시작
+    .delay((d, i) => i * interval)
     .duration(speed)
-    .attr("height", (d) => yPercent(d))
-    .attr("y", (d, i) => svgHt - yPercent(d));
+    .attr("opacity", 1);
 
-  //텍스트 출력
   svg
     .selectAll("text")
-    .data(dataset)
+    .data(pieData)
     .enter()
     .append("text")
-    .text((d) => d)
-    .attr("y", (d) => svgHt - yPercent(d) + 30)
-    .attr("x", (d, i) => i * (barWid + gap) + initPos + barWid / 2)
-    .attr("font-size", "16px")
-    .attr("fill", "transparent")
+    .text((d) => d.data)
+    .attr("transform", (d) => {
+      const [x, y] = arc.centroid(d);
+      return `translate(${centerX + x}, ${centerY + y})`;
+    })
     .attr("text-anchor", "middle")
+    .attr("alignment-baseline", "middle")
+    .style("font-size", "24px")
+    .style("fill", "black")
+    .attr("opacity", 0)
     .transition()
-    .delay((d, i) => i * interval + speed)
+    .delay((d, i) => i * interval + speed / 2)
     .duration(speed)
-    .attr("fill", "black");
+    .attr("opacity", 1);
 }
